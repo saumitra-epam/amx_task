@@ -1,93 +1,179 @@
-# AMX
+# Resource Reservation Service
 
+A lightweight FastAPI service for creating, listing, updating, and canceling resource reservations. The current implementation uses in-memory dictionaries for storage and is intended as a starting point for a more production-ready version with a proper database, service layer, and structured models.
 
+## Overview
 
-## Getting started
+This service allows you to:
+- Create and manage resources such as desks or equipment
+- Reserve a resource for a specific time window
+- Prevent overlapping bookings for the same resource
+- Cancel reservations
+- Check the status of resources and reservations
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Current Tech Stack
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- Python 3.11
+- FastAPI
+- Pydantic
+- Uvicorn
+- Docker / Docker Compose
 
-## Add your files
+## Current API Endpoints
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+The app currently exposes the following endpoints:
 
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | / | Health check |
+| POST | /create_resource | Create a new resource |
+| GET | /resources/{resource_id} | Fetch a single resource |
+| GET | /get-all-resources | List all stored resources |
+| DELETE | /delete-resource/{resource_id} | Delete a resource if no active reservation exists |
+| POST | /create-reservation | Create a reservation for a resource |
+| DELETE | /cancel-reservations/{reservation_id} | Cancel a reservation |
+| GET | /list-all-reservations | List all reservations |
+
+### Request and Response Notes
+
+#### Create Resource
+Request body:
+```json
+{
+  "name": "Desk 101",
+  "type": "desk"
+}
 ```
-cd existing_repo
-git remote add origin https://git.epam.com/saumitra_panchal/amx.git
-git branch -M main
-git push -uf origin main
+
+Response:
+```json
+{
+  "resource_id": "uuid-string",
+  "name": "Desk 101",
+  "type": "desk",
+  "status": "available"
+}
 ```
 
-## Integrate with your tools
+#### Create Reservation
+Request body:
+```json
+{
+  "resource_id": "resource-uuid",
+  "user_id": "emp-123",
+  "start_time": "2026-10-26T09:00:00",
+  "end_time": "2026-10-26T10:00:00"
+}
+```
 
-* [Set up project integrations](https://git.epam.com/saumitra_panchal/amx/-/settings/integrations)
+Response:
+```json
+{
+  "reservation_id": "uuid-string",
+  "resource_id": "resource-uuid",
+  "user_id": "emp-123",
+  "start_time": "2026-10-26T09:00:00",
+  "end_time": "2026-10-26T10:00:00",
+  "status": "active"
+}
+```
 
-## Collaborate with your team
+## Running the Service Locally
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### Option 1: Using Docker Compose
+From the project root:
+```bash
+cd resource-reservation
+docker compose up --build
+```
 
-## Test and Deploy
+This will start the FastAPI app on:
+- http://localhost:8000
+- Swagger UI: http://localhost:8000/docs
 
-Use the built-in continuous integration in GitLab.
+### Option 2: Using Docker directly
+```bash
+cd resource-reservation
+docker build -t resource-reservation .
+docker run --rm -p 8000:8000 resource-reservation
+```
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+### Option 3: Running without Docker
+```bash
+cd resource-reservation
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-***
+## Project Structure
 
-# Editing this README
+Current structure:
+```text
+resource-reservation/
+├── Dockerfile
+├── docker-compose.yml
+├── main.py
+├── requirements.txt
+├── README.MD
+└── tests/
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## Recommended Next Steps
+1. Extract helper functions into helpers.py
+2. Move database logic to db.py
+3. Create config.py for configuration management
 
-## Suggestions for a good README
+4. Add PUT endpoints for updating resources and reservations
+PUT /resources/{resource_id} - Update resource details
+PUT /reservations/{reservation_id} - Modify reservation times
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+5. Add filtering to list endpoints
+Filter reservations by user_id, resource_id, status, date_range
+Filter resources by type, status
 
-## Name
-Choose a self-explaining name for your project.
+6. Add pagination support
+Query parameters: ?skip=0&limit=10
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+7. The current app stores data in dictionary objects inside the application file. For iteration 2 use actual database
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+## Production level
+1. Idempotency
+Use idempotency keys to prevent duplicate requests
+Store request hashes
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+2. Concurrency handling
+Implement row-level locking
+Handle race conditions for simultaneous bookings
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+3. Authentication & Authorization
+Add JWT tokens
+User roles (admin, regular user)
+Permission-based access
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+4. Observability
+Add structured logging
+Request tracing (correlation IDs)
+Metrics (Prometheus)
+Health checks with dependency status
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+## Useful Local URLs
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+- App root: http://localhost:8000/
+- Swagger docs: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+## Example Commands
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```bash
+# build and run with Docker Compose
+cd resource-reservation
+docker compose up --build
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+# stop containers
+cd resource-reservation
+docker compose down
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+# run app directly with uvicorn
+cd resource-reservation
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
